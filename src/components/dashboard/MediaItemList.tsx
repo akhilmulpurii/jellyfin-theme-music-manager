@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import type { MovieItem } from '@/types/media'
 import { downloadAudio, downloadVideo } from '@/lib/api'
 
-export function MediaItemList({ items }: { items: MovieItem[] }) {
+export function MediaItemList({ items, cookiesPath }: { items: MovieItem[]; cookiesPath?: string }) {
   const [audioUrls, setAudioUrls] = useState<Record<string, string>>({})
   const [videoUrls, setVideoUrls] = useState<Record<string, string>>({})
   const [loadingAudio, setLoadingAudio] = useState<Record<string, boolean>>({})
@@ -23,7 +23,7 @@ export function MediaItemList({ items }: { items: MovieItem[] }) {
     try {
       setLoadingVideo((s) => ({ ...s, [item.id]: true }))
       // For MVP, we do not stream progress yet. Just call endpoint.
-      const res = await downloadVideo(url, item.id, item.path)
+      const res = await downloadVideo(url, item.id, item.path, cookiesPath || undefined)
       toast.success(res.createdBackdrops ? 'Backdrops folder created and video downloaded' : 'Video downloaded')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Download failed'
@@ -39,7 +39,7 @@ export function MediaItemList({ items }: { items: MovieItem[] }) {
     if (!url) return toast.error('Enter a URL')
     try {
       setLoadingAudio((s) => ({ ...s, [item.id]: true }))
-      await downloadAudio(url, item.id, item.path)
+      await downloadAudio(url, item.id, item.path, cookiesPath || undefined)
       toast.success('Audio downloaded')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Download failed'

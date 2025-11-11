@@ -30,11 +30,11 @@ export async function getSeries(): Promise<MovieItem[]> {
   return data.items || []
 }
 
-export async function downloadVideo(url: string, itemId: string, targetPath: string) {
+export async function downloadVideo(url: string, itemId: string, targetPath: string, cookiesFilePath?: string) {
   const res = await fetch('/api/download/video', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, itemId, targetPath }),
+    body: JSON.stringify({ url, itemId, targetPath, cookiesFilePath }),
   })
   const data = await res.json()
   if (!res.ok || !data?.success) {
@@ -43,11 +43,11 @@ export async function downloadVideo(url: string, itemId: string, targetPath: str
   return data
 }
 
-export async function downloadAudio(url: string, itemId: string, targetPath: string) {
+export async function downloadAudio(url: string, itemId: string, targetPath: string, cookiesFilePath?: string) {
   const res = await fetch('/api/download/audio', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, itemId, targetPath }),
+    body: JSON.stringify({ url, itemId, targetPath, cookiesFilePath }),
   })
   const data = await res.json()
   if (!res.ok || !data?.success) {

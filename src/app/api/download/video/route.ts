@@ -11,6 +11,7 @@ interface DownloadVideoRequest {
   url: string
   itemId: string
   targetPath: string
+  cookiesFilePath?: string
 }
 
 function jsonError(message: string, status = 400) {
@@ -25,6 +26,8 @@ export async function POST(req: Request) {
     const url = String(body.url || '')
     const itemId = String(body.itemId || '')
     const targetPath = String(body.targetPath || '')
+    const cookiesFromBody = body.cookiesFilePath ? String(body.cookiesFilePath) : ''
+    const cookiesEnv = process.env.YTDLP_COOKIES_FILE || ''
 
     if (!url || !isValidHttpUrl(url)) return jsonError('Invalid url provided')
     if (!targetPath || !isAbsolutePath(targetPath)) return jsonError('Invalid targetPath provided; must be absolute')
@@ -41,6 +44,20 @@ export async function POST(req: Request) {
       '--no-playlist',
       url,
     ]
+
+    // Resolve cookies file: request overrides env. Must be absolute and readable.
+    const cookiesFile = cookiesFromBody || cookiesEnv
+    if (cookiesFile) {
+      try {
+        const stat = await fs.stat(cookiesFile)
+        if (!stat.isFile()) {
+          return jsonError(`Cookies file is not a file: ${cookiesFile}`)
+        }
+        args.splice(args.length - 1, 0, '--cookies', cookiesFile)
+      } catch {
+        return jsonError(`Cookies file not readable: ${cookiesFile}`)
+      }
+    }
 
     const result = await runYtDlp(args)
 

@@ -7,12 +7,14 @@ import { MediaItemList } from './MediaItemList'
 import { getMovies, getSeries } from '@/lib/api'
 import type { MovieItem } from '@/types/media'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
   const [tab, setTab] = useState<'movies' | 'series'>('movies')
   const [movies, setMovies] = useState<MovieItem[] | null>(null)
   const [series, setSeries] = useState<MovieItem[] | null>(null)
   const [loading, setLoading] = useState(false)
+  const [cookiesPath, setCookiesPath] = useState<string>("")
 
   async function loadMovies() {
     setLoading(true)
@@ -56,18 +58,25 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
           <TabsTrigger value="series">TV Shows</TabsTrigger>
         </TabsList>
         <Separator className="my-4" />
+        <div className="mb-4 flex items-center gap-2">
+          <Input
+            placeholder="Optional cookies.txt absolute path (used for all downloads)"
+            value={cookiesPath}
+            onChange={(e) => setCookiesPath(e.target.value)}
+          />
+        </div>
         <TabsContent value="movies">
           {loading && movies == null ? (
             <div className="text-sm text-muted-foreground">Loading...</div>
           ) : (
-            <MediaItemList items={movies || []} />
+            <MediaItemList items={movies || []} cookiesPath={cookiesPath || undefined} />
           )}
         </TabsContent>
         <TabsContent value="series">
           {loading && series == null ? (
             <div className="text-sm text-muted-foreground">Loading...</div>
           ) : (
-            <MediaItemList items={series || []} />
+            <MediaItemList items={series || []} cookiesPath={cookiesPath || undefined} />
           )}
         </TabsContent>
       </Tabs>
