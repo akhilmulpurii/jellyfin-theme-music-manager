@@ -8,6 +8,7 @@ import type { PathConfig } from '@/types/media'
 
 export function AppRoot() {
   const [paths, setPaths] = useState<PathConfig[] | null>(null)
+  const [editing, setEditing] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -28,21 +29,24 @@ export function AppRoot() {
     return <div className="text-sm text-muted-foreground">Loading...</div>
   }
 
-  if (!paths.length) {
-    // Reload paths after successful save
+  if (!paths.length || editing) {
+    // Reload paths after successful save, and exit edit mode
     return (
       <PathConfigurationForm
+        initialPaths={paths.length ? paths : undefined}
         onComplete={async () => {
           try {
             const p = await getPaths()
             setPaths(p)
+            setEditing(false)
           } catch {
             setPaths([])
+            setEditing(false)
           }
         }}
       />
     )
   }
 
-  return <Dashboard />
+  return <Dashboard onEditPaths={() => setEditing(true)} />
 }

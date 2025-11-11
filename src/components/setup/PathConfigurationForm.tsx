@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -36,12 +36,18 @@ const PathsSchema = z
 
 type PathsFormValues = z.infer<typeof PathsSchema>
 
-export function PathConfigurationForm({ onComplete }: { onComplete?: () => void }) {
+export function PathConfigurationForm({ onComplete, initialPaths }: { onComplete?: () => void; initialPaths?: PathConfig[] }) {
   const form = useForm<PathsFormValues>({
     resolver: zodResolver(PathsSchema),
-    defaultValues: { paths: [{ path: '', type: 'Movie' }] },
+    defaultValues: { paths: initialPaths && initialPaths.length ? initialPaths : [{ path: '', type: 'Movie' }] },
     mode: 'onChange',
   })
+
+  useEffect(() => {
+    if (initialPaths && initialPaths.length) {
+      form.reset({ paths: initialPaths })
+    }
+  }, [initialPaths, form])
 
   const { fields, append, remove } = useFieldArray({ name: 'paths', control: form.control })
   const [submitting, setSubmitting] = useState(false)

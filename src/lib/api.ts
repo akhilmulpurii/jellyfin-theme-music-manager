@@ -42,3 +42,16 @@ export async function downloadVideo(url: string, itemId: string, targetPath: str
   }
   return data
 }
+
+export async function downloadAudio(url: string, itemId: string, targetPath: string) {
+  const res = await fetch('/api/download/audio', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, itemId, targetPath }),
+  })
+  const data = await res.json()
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.error || 'Audio download failed')
+  }
+  return data
+}
