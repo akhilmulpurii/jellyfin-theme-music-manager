@@ -227,6 +227,7 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
               cookiesPath={cookiesMethod === 'path' || cookiesMethod === 'upload' || cookiesMethod === 'paste' ? (cookiesPath || undefined) : undefined}
               useCookiesFromBrowser={cookiesMethod === 'browser' ? useCookiesFromBrowser : false}
               browser={cookiesMethod === 'browser' ? browser : undefined}
+              onRefresh={loadMovies}
             />
           )}
         </TabsContent>
@@ -239,6 +240,7 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
               cookiesPath={cookiesMethod === 'path' || cookiesMethod === 'upload' || cookiesMethod === 'paste' ? (cookiesPath || undefined) : undefined}
               useCookiesFromBrowser={cookiesMethod === 'browser' ? useCookiesFromBrowser : false}
               browser={cookiesMethod === 'browser' ? browser : undefined}
+              onRefresh={loadSeries}
             />
           )}
         </TabsContent>

@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import type { MovieItem } from '@/types/media'
 import { downloadAudio, downloadVideo } from '@/lib/api'
 
-export function MediaItemList({ items, cookiesPath, useCookiesFromBrowser, browser }: { items: MovieItem[]; cookiesPath?: string; useCookiesFromBrowser?: boolean; browser?: string }) {
+export function MediaItemList({ items, cookiesPath, useCookiesFromBrowser, browser, onRefresh }: { items: MovieItem[]; cookiesPath?: string; useCookiesFromBrowser?: boolean; browser?: string; onRefresh?: () => void | Promise<void> }) {
   const [audioUrls, setAudioUrls] = useState<Record<string, string>>({})
   const [videoUrls, setVideoUrls] = useState<Record<string, string>>({})
   const [loadingAudio, setLoadingAudio] = useState<Record<string, boolean>>({})
@@ -29,6 +29,7 @@ export function MediaItemList({ items, cookiesPath, useCookiesFromBrowser, brows
         browser: browser || undefined,
       })
       toast.success(res.createdBackdrops ? 'Backdrops folder created and video downloaded' : 'Video downloaded')
+      if (onRefresh) await onRefresh()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Download failed'
       toast.error(message)
@@ -49,6 +50,7 @@ export function MediaItemList({ items, cookiesPath, useCookiesFromBrowser, brows
         browser: browser || undefined,
       })
       toast.success('Audio downloaded')
+      if (onRefresh) await onRefresh()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Download failed'
       toast.error(message)
@@ -97,9 +99,7 @@ export function MediaItemList({ items, cookiesPath, useCookiesFromBrowser, brows
                   ) : (
                     <Badge variant="destructive">Missing</Badge>
                   )}
-                  {!item.themeVideo.backdropsFolderExists && (
-                    <Badge variant="secondary">Folder will be created</Badge>
-                  )}
+                  
                 </div>
                 </TableCell>
                 <TableCell>
