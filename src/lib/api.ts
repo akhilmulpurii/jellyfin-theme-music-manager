@@ -72,3 +72,16 @@ export async function uploadCookies(file: File): Promise<string> {
   }
   return data.path as string
 }
+
+export async function uploadCookiesText(text: string): Promise<string> {
+  const res = await fetch('/api/cookies/text', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  const data = await res.json()
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.error || 'Failed to save cookies text')
+  }
+  return data.path as string
+}
