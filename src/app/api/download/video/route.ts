@@ -12,6 +12,8 @@ interface DownloadVideoRequest {
   itemId: string
   targetPath: string
   cookiesFilePath?: string
+  useCookiesFromBrowser?: boolean
+  browser?: string
 }
 
 function jsonError(message: string, status = 400) {
@@ -28,6 +30,8 @@ export async function POST(req: Request) {
     const targetPath = String(body.targetPath || '')
     const cookiesFromBody = body.cookiesFilePath ? String(body.cookiesFilePath) : ''
     const cookiesEnv = process.env.YTDLP_COOKIES_FILE || ''
+    const useCookiesFromBrowser = Boolean(body.useCookiesFromBrowser)
+    const browser = (body.browser || '').toString().trim().toLowerCase() || process.env.YTDLP_BROWSER || ''
 
     if (!url || !isValidHttpUrl(url)) return jsonError('Invalid url provided')
     if (!targetPath || !isAbsolutePath(targetPath)) return jsonError('Invalid targetPath provided; must be absolute')
@@ -45,7 +49,7 @@ export async function POST(req: Request) {
       url,
     ]
 
-    // Resolve cookies file: request overrides env. Must be absolute and readable.
+    // Resolve cookies via file first: request overrides env. Must be absolute and readable.
     const cookiesFile = cookiesFromBody || cookiesEnv
     if (cookiesFile) {
       try {
@@ -57,6 +61,13 @@ export async function POST(req: Request) {
       } catch {
         return jsonError(`Cookies file not readable: ${cookiesFile}`)
       }
+    }
+
+    // Or use cookies-from-browser if requested and no file was used
+    if (!cookiesFile && useCookiesFromBrowser) {
+      const allowed = new Set(['chrome', 'chromium', 'brave', 'edge', 'firefox', 'safari'])
+      const chosen = browser && allowed.has(browser) ? browser : 'chrome'
+      args.splice(args.length - 1, 0, '--cookies-from-browser', chosen)
     }
 
     const result = await runYtDlp(args)

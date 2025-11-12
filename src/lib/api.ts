@@ -30,11 +30,17 @@ export async function getSeries(): Promise<MovieItem[]> {
   return data.items || []
 }
 
-export async function downloadVideo(url: string, itemId: string, targetPath: string, cookiesFilePath?: string) {
+type DownloadOptions = {
+  cookiesFilePath?: string
+  useCookiesFromBrowser?: boolean
+  browser?: string
+}
+
+export async function downloadVideo(url: string, itemId: string, targetPath: string, opts: DownloadOptions = {}) {
   const res = await fetch('/api/download/video', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, itemId, targetPath, cookiesFilePath }),
+    body: JSON.stringify({ url, itemId, targetPath, ...opts }),
   })
   const data = await res.json()
   if (!res.ok || !data?.success) {
@@ -43,15 +49,26 @@ export async function downloadVideo(url: string, itemId: string, targetPath: str
   return data
 }
 
-export async function downloadAudio(url: string, itemId: string, targetPath: string, cookiesFilePath?: string) {
+export async function downloadAudio(url: string, itemId: string, targetPath: string, opts: DownloadOptions = {}) {
   const res = await fetch('/api/download/audio', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, itemId, targetPath, cookiesFilePath }),
+    body: JSON.stringify({ url, itemId, targetPath, ...opts }),
   })
   const data = await res.json()
   if (!res.ok || !data?.success) {
     throw new Error(data?.error || 'Audio download failed')
   }
   return data
+}
+
+export async function uploadCookies(file: File): Promise<string> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch('/api/cookies/upload', { method: 'POST', body: form })
+  const data = await res.json()
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.error || 'Failed to upload cookies file')
+  }
+  return data.path as string
 }
