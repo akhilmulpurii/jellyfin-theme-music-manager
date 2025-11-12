@@ -25,6 +25,7 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
   const [uploading, setUploading] = useState(false)
   const [cookiesFile, setCookiesFile] = useState<File | null>(null)
   const [cookiesText, setCookiesText] = useState<string>("")
+  const [filter, setFilter] = useState<'all' | 'missing-audio' | 'missing-video' | 'missing-any'>('all')
 
   async function loadMovies() {
     setLoading(true)
@@ -56,6 +57,21 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
     if (tab === 'series' && series == null) void loadSeries()
   }, [tab, movies, series])
 
+  function applyFilter(items: MovieItem[] | null): MovieItem[] {
+    if (!items) return []
+    switch (filter) {
+      case 'missing-audio':
+        return items.filter((i) => !i.themeAudio.exists)
+      case 'missing-video':
+        return items.filter((i) => !i.themeVideo.exists)
+      case 'missing-any':
+        return items.filter((i) => !i.themeAudio.exists || !i.themeVideo.exists)
+      case 'all':
+      default:
+        return items
+    }
+  }
+
   return (
     <div className="w-full">
       <div className="mb-4 flex items-center justify-between">
@@ -69,6 +85,20 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
         </TabsList>
         <Separator className="my-4" />
         <div className="mb-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <label className="text-sm">Filter</label>
+            <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
+              <SelectTrigger className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All items</SelectItem>
+                <SelectItem value="missing-any">Missing audio or video</SelectItem>
+                <SelectItem value="missing-audio">Missing theme audio</SelectItem>
+                <SelectItem value="missing-video">Missing theme video</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center gap-2">
             <label className="text-sm">Cookies method</label>
             <Select
@@ -193,7 +223,7 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
             <div className="text-sm text-muted-foreground">Loading...</div>
           ) : (
             <MediaItemList
-              items={movies || []}
+              items={applyFilter(movies)}
               cookiesPath={cookiesMethod === 'path' || cookiesMethod === 'upload' || cookiesMethod === 'paste' ? (cookiesPath || undefined) : undefined}
               useCookiesFromBrowser={cookiesMethod === 'browser' ? useCookiesFromBrowser : false}
               browser={cookiesMethod === 'browser' ? browser : undefined}
@@ -205,7 +235,7 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
             <div className="text-sm text-muted-foreground">Loading...</div>
           ) : (
             <MediaItemList
-              items={series || []}
+              items={applyFilter(series)}
               cookiesPath={cookiesMethod === 'path' || cookiesMethod === 'upload' || cookiesMethod === 'paste' ? (cookiesPath || undefined) : undefined}
               useCookiesFromBrowser={cookiesMethod === 'browser' ? useCookiesFromBrowser : false}
               browser={cookiesMethod === 'browser' ? browser : undefined}
