@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { MediaItemList } from './MediaItemList'
-import { getMovies, getSeries } from '@/lib/api'
+import { getMovies, getSeries, downloadAudio, downloadVideo } from '@/lib/api'
 import type { MovieItem } from '@/types/media'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,7 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
   const [movies, setMovies] = useState<MovieItem[] | null>(null)
   const [series, setSeries] = useState<MovieItem[] | null>(null)
   const [loading, setLoading] = useState(false)
+  const [executing, setExecuting] = useState(false)
   const [cookiesMethod, setCookiesMethod] = useState<'none' | 'path' | 'upload' | 'paste' | 'browser'>('none')
   const [cookiesPath, setCookiesPath] = useState<string>("")
   const [useCookiesFromBrowser, setUseCookiesFromBrowser] = useState<boolean>(false)
@@ -26,8 +27,9 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
   const [cookiesFile, setCookiesFile] = useState<File | null>(null)
   const [cookiesText, setCookiesText] = useState<string>("")
   const [filter, setFilter] = useState<'all' | 'missing-audio' | 'missing-video' | 'missing-any'>('all')
+  const [queue, setQueue] = useState<Array<{ type: 'audio' | 'video'; item: MovieItem; url: string }>>([])
 
-  async function loadMovies() {
+  const loadMovies = useCallback(async () => {
     setLoading(true)
     try {
       const items = await getMovies()
@@ -35,9 +37,9 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  async function loadSeries() {
+  const loadSeries = useCallback(async () => {
     setLoading(true)
     try {
       const items = await getSeries()
@@ -45,17 +47,65 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  function enqueue(task: { type: 'audio' | 'video'; item: MovieItem; url: string }) {
+    setQueue((q) => [...q, task])
+  }
+
+  function clearQueue() {
+    if (executing) return
+    setQueue([])
+  }
+
+  async function executeQueue() {
+    if (!queue.length) return toast.info('Queue is empty')
+    if (executing) return
+    setExecuting(true)
+    try {
+      const useBrowser = cookiesMethod === 'browser' ? useCookiesFromBrowser : false
+      const cookiesFilePath = (cookiesMethod === 'path' || cookiesMethod === 'upload' || cookiesMethod === 'paste') && cookiesPath ? cookiesPath : undefined
+      for (let i = 0; i < queue.length; i++) {
+        const t = queue[i]
+        try {
+          if (t.type === 'audio') {
+            await downloadAudio(t.url, t.item.id, t.item.path, {
+              cookiesFilePath,
+              useCookiesFromBrowser: useBrowser,
+              browser: cookiesMethod === 'browser' ? browser : undefined,
+            })
+            toast.success(`Audio downloaded: ${t.item.name}`)
+          } else {
+            await downloadVideo(t.url, t.item.id, t.item.path, {
+              cookiesFilePath,
+              useCookiesFromBrowser: useBrowser,
+              browser: cookiesMethod === 'browser' ? browser : undefined,
+            })
+            toast.success(`Video downloaded: ${t.item.name}`)
+          }
+          // Refresh current tab after each success
+          if (tab === 'movies') await loadMovies()
+          else await loadSeries()
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : 'Download failed'
+          toast.error(`${t.type === 'audio' ? 'Audio' : 'Video'} failed for ${t.item.name}: ${msg}`)
+        }
+      }
+    } finally {
+      setExecuting(false)
+      setQueue([])
+    }
   }
 
   useEffect(() => {
     // load initial
     void loadMovies()
-  }, [])
+  }, [loadMovies])
 
   useEffect(() => {
     if (tab === 'movies' && movies == null) void loadMovies()
     if (tab === 'series' && series == null) void loadSeries()
-  }, [tab, movies, series])
+  }, [tab, movies, series, loadMovies, loadSeries])
 
   function applyFilter(items: MovieItem[] | null): MovieItem[] {
     if (!items) return []
@@ -98,6 +148,17 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
                 <SelectItem value="missing-video">Missing theme video</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm">Queue</label>
+            <div className="text-sm">{queue.length} item(s)</div>
+            <Button size="sm" variant="secondary" onClick={executeQueue} disabled={!queue.length || executing}>
+              {executing ? 'Executing…' : 'Execute Queue'}
+            </Button>
+            <Button size="sm" variant="outline" onClick={clearQueue} disabled={!queue.length || executing}>
+              Clear Queue
+            </Button>
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm">Cookies method</label>
@@ -224,10 +285,7 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
           ) : (
             <MediaItemList
               items={applyFilter(movies)}
-              cookiesPath={cookiesMethod === 'path' || cookiesMethod === 'upload' || cookiesMethod === 'paste' ? (cookiesPath || undefined) : undefined}
-              useCookiesFromBrowser={cookiesMethod === 'browser' ? useCookiesFromBrowser : false}
-              browser={cookiesMethod === 'browser' ? browser : undefined}
-              onRefresh={loadMovies}
+              onQueue={enqueue}
             />
           )}
         </TabsContent>
@@ -237,10 +295,7 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
           ) : (
             <MediaItemList
               items={applyFilter(series)}
-              cookiesPath={cookiesMethod === 'path' || cookiesMethod === 'upload' || cookiesMethod === 'paste' ? (cookiesPath || undefined) : undefined}
-              useCookiesFromBrowser={cookiesMethod === 'browser' ? useCookiesFromBrowser : false}
-              browser={cookiesMethod === 'browser' ? browser : undefined}
-              onRefresh={loadSeries}
+              onQueue={enqueue}
             />
           )}
         </TabsContent>

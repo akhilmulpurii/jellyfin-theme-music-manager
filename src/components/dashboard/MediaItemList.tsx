@@ -5,59 +5,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 import type { MovieItem } from '@/types/media'
-import { downloadAudio, downloadVideo } from '@/lib/api'
 
-export function MediaItemList({ items, cookiesPath, useCookiesFromBrowser, browser, onRefresh }: { items: MovieItem[]; cookiesPath?: string; useCookiesFromBrowser?: boolean; browser?: string; onRefresh?: () => void | Promise<void> }) {
+export function MediaItemList({ items, onQueue }: { items: MovieItem[]; onQueue?: (task: { type: 'audio' | 'video'; item: MovieItem; url: string }) => void }) {
   const [audioUrls, setAudioUrls] = useState<Record<string, string>>({})
   const [videoUrls, setVideoUrls] = useState<Record<string, string>>({})
-  const [loadingAudio, setLoadingAudio] = useState<Record<string, boolean>>({})
-  const [loadingVideo, setLoadingVideo] = useState<Record<string, boolean>>({})
-  const [progress, setProgress] = useState<Record<string, number>>({})
-
-  async function handleDownloadVideo(item: MovieItem) {
+  function handleQueueVideo(item: MovieItem) {
     const url = videoUrls[item.id]
     if (!url) return toast.error('Enter a URL')
-    try {
-      setLoadingVideo((s) => ({ ...s, [item.id]: true }))
-      // For MVP, we do not stream progress yet. Just call endpoint.
-      const res = await downloadVideo(url, item.id, item.path, {
-        cookiesFilePath: cookiesPath || undefined,
-        useCookiesFromBrowser: useCookiesFromBrowser || false,
-        browser: browser || undefined,
-      })
-      toast.success(res.createdBackdrops ? 'Backdrops folder created and video downloaded' : 'Video downloaded')
-      if (onRefresh) await onRefresh()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Download failed'
-      toast.error(message)
-    } finally {
-      setLoadingVideo((s) => ({ ...s, [item.id]: false }))
-      setProgress((s) => ({ ...s, [item.id]: 0 }))
-    }
+    onQueue?.({ type: 'video', item, url })
+    toast.success('Queued video download')
   }
 
-  async function handleDownloadAudio(item: MovieItem) {
+  function handleQueueAudio(item: MovieItem) {
     const url = audioUrls[item.id]
     if (!url) return toast.error('Enter a URL')
-    try {
-      setLoadingAudio((s) => ({ ...s, [item.id]: true }))
-      await downloadAudio(url, item.id, item.path, {
-        cookiesFilePath: cookiesPath || undefined,
-        useCookiesFromBrowser: useCookiesFromBrowser || false,
-        browser: browser || undefined,
-      })
-      toast.success('Audio downloaded')
-      if (onRefresh) await onRefresh()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Download failed'
-      toast.error(message)
-    } finally {
-      setLoadingAudio((s) => ({ ...s, [item.id]: false }))
-      setProgress((s) => ({ ...s, [item.id]: 0 }))
-    }
+    onQueue?.({ type: 'audio', item, url })
+    toast.success('Queued audio download')
   }
 
   return (
@@ -110,9 +75,7 @@ export function MediaItemList({ items, cookiesPath, useCookiesFromBrowser, brows
                         value={audioUrls[item.id] || ''}
                         onChange={(e) => setAudioUrls((s) => ({ ...s, [item.id]: e.target.value }))}
                       />
-                      <Button disabled={loadingAudio[item.id]} onClick={() => handleDownloadAudio(item)}>
-                        {loadingAudio[item.id] ? 'Downloading...' : 'Download Audio'}
-                      </Button>
+                      <Button onClick={() => handleQueueAudio(item)}>Queue Audio</Button>
                     </div>
                     <div className="flex items-center gap-2">
                       <Input
@@ -120,15 +83,8 @@ export function MediaItemList({ items, cookiesPath, useCookiesFromBrowser, brows
                         value={videoUrls[item.id] || ''}
                         onChange={(e) => setVideoUrls((s) => ({ ...s, [item.id]: e.target.value }))}
                       />
-                      <Button disabled={loadingVideo[item.id]} onClick={() => handleDownloadVideo(item)}>
-                        {loadingVideo[item.id] ? 'Downloading...' : 'Download Video'}
-                      </Button>
+                      <Button onClick={() => handleQueueVideo(item)}>Queue Video</Button>
                     </div>
-                    {(loadingAudio[item.id] || loadingVideo[item.id]) && (
-                      <div className="mt-2">
-                        <Progress value={progress[item.id] || 0} />
-                      </div>
-                    )}
                   </div>
                 </TableCell>
               </TableRow>
