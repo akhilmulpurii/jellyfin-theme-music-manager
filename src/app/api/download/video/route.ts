@@ -14,6 +14,7 @@ interface DownloadVideoRequest {
   cookiesFilePath?: string
   useCookiesFromBrowser?: boolean
   browser?: string
+  postProcessCrop?: boolean
 }
 
 function jsonError(message: string, status = 400) {
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
     const cookiesEnv = process.env.YTDLP_COOKIES_FILE || ''
     const useCookiesFromBrowser = Boolean(body.useCookiesFromBrowser)
     const browser = (body.browser || '').toString().trim().toLowerCase() || process.env.YTDLP_BROWSER || ''
+    const postProcessCrop = Boolean(body.postProcessCrop)
 
     if (!url || !isValidHttpUrl(url)) return jsonError('Invalid url provided')
     if (!targetPath || !isAbsolutePath(targetPath)) return jsonError('Invalid targetPath provided; must be absolute')
@@ -84,15 +86,52 @@ export async function POST(req: Request) {
     }
 
     const full = path.join(backdropsPath, candidate)
-    const stat = await fs.stat(full)
+    let finalPath = full
+    let cropValue: string | undefined
+
+    if (postProcessCrop) {
+      // Run ffmpeg cropdetect for ~4s to get crop value
+      // ffmpeg -t 4 -i input -vf cropdetect -f null -
+      const { spawn } = await import('node:child_process')
+      const detectArgs = ['-t', '4', '-i', full, '-vf', 'cropdetect=24:16:0', '-f', 'null', '-']
+      const detect = spawn('ffmpeg', detectArgs)
+      let stderr = ''
+      detect.stderr.on('data', (d) => (stderr += d.toString()))
+      await new Promise<void>((resolve) => detect.on('close', () => resolve()))
+
+      const matches = [...stderr.matchAll(/crop=([0-9:]+\:[0-9:]+)/g)].map((m) => m[0].replace('crop=', ''))
+      // Fallback regex if above grouping fails
+      const altMatches = [...stderr.matchAll(/crop=\d+:\d+:\d+:\d+/g)].map((m) => m[0].replace('crop=', ''))
+      const all = matches.length ? matches : altMatches
+      if (all.length) {
+        // Choose the last detected crop as representative
+        cropValue = all[all.length - 1]
+        if (cropValue && !/^iw:ih:0:0$/.test(cropValue)) {
+          const tmpOut = path.join(backdropsPath, 'theme._cropped.mp4')
+          const cropArgs = ['-y', '-i', full, '-vf', `crop=${cropValue}`, '-c:a', 'copy', tmpOut]
+          const crop = spawn('ffmpeg', cropArgs)
+          await new Promise<void>((resolve) => crop.on('close', () => resolve()))
+          try {
+            await fs.rename(tmpOut, full)
+            finalPath = full
+          } catch {
+            // ignore if rename fails; keep original
+          }
+        }
+      }
+    }
+
+    const stat = await fs.stat(finalPath)
 
     return NextResponse.json({
       success: true,
       itemId,
       createdBackdrops: created,
+      postProcessed: postProcessCrop || false,
+      crop: cropValue,
       file: {
-        path: full,
-        format: path.extname(full).slice(1),
+        path: finalPath,
+        format: path.extname(finalPath).slice(1),
         size: stat.size,
       },
     })

@@ -28,6 +28,8 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
   const [cookiesText, setCookiesText] = useState<string>("")
   const [filter, setFilter] = useState<'all' | 'missing-audio' | 'missing-video' | 'missing-any'>('all')
   const [queue, setQueue] = useState<Array<{ type: 'audio' | 'video'; item: MovieItem; url: string }>>([])
+  const [removeBlackBars, setRemoveBlackBars] = useState<boolean>(false)
+  const [executingLabel, setExecutingLabel] = useState<string>('')
 
   const loadMovies = useCallback(async () => {
     setLoading(true)
@@ -68,6 +70,13 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
       for (let i = 0; i < queue.length; i++) {
         const t = queue[i]
         try {
+          setExecutingLabel(
+            t.type === 'video'
+              ? removeBlackBars
+                ? `Running YTDLP/FFMPEG on ${t.item.name}`
+                : `Running YTDLP on ${t.item.name}`
+              : `Running YTDLP on ${t.item.name}`
+          )
           if (t.type === 'audio') {
             await downloadAudio(t.url, t.item.id, t.item.path, {
               cookiesFilePath,
@@ -80,6 +89,7 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
               cookiesFilePath,
               useCookiesFromBrowser: useBrowser,
               browser: cookiesMethod === 'browser' ? browser : undefined,
+              postProcessCrop: removeBlackBars,
             })
             toast.success(`Video downloaded: ${t.item.name}`)
           }
@@ -94,6 +104,7 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
     } finally {
       setExecuting(false)
       setQueue([])
+      setExecutingLabel('')
     }
   }
 
@@ -159,6 +170,19 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
             <Button size="sm" variant="outline" onClick={clearQueue} disabled={!queue.length || executing}>
               Clear Queue
             </Button>
+          </div>
+          {executingLabel ? (
+            <div className="text-xs text-muted-foreground">{executingLabel}</div>
+          ) : null}
+
+          <div className="flex items-center gap-2">
+            <input
+              id="toggle-crop"
+              type="checkbox"
+              checked={removeBlackBars}
+              onChange={(e) => setRemoveBlackBars(e.target.checked)}
+            />
+            <label htmlFor="toggle-crop" className="text-sm select-none">Remove black bars (ffmpeg crop)</label>
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm">Cookies method</label>

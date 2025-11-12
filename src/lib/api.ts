@@ -34,6 +34,7 @@ type DownloadOptions = {
   cookiesFilePath?: string
   useCookiesFromBrowser?: boolean
   browser?: string
+  postProcessCrop?: boolean
 }
 
 export async function downloadVideo(url: string, itemId: string, targetPath: string, opts: DownloadOptions = {}) {
