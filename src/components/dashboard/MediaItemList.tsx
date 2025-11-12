@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -26,72 +27,91 @@ export function MediaItemList({ items, onQueue }: { items: MovieItem[]; onQueue?
   }
 
   return (
-    <div className="w-full overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[30%]">Name</TableHead>
-            <TableHead>Theme Audio</TableHead>
-            <TableHead>Theme Video</TableHead>
-            <TableHead className="w-[36%]">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((item) => {
-            const missingAudio = !item.themeAudio.exists
-            const missingVideo = !item.themeVideo.exists
-            const rowMissing = missingAudio || missingVideo
-            return (
-              <TableRow key={item.id} className={rowMissing ? 'bg-red-50/40 dark:bg-red-950/20' : undefined}>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>
-                {item.themeAudio.exists ? (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{item.themeAudio.format?.toUpperCase()}</Badge>
-                    <span className="text-xs text-muted-foreground">theme.{item.themeAudio.format}</span>
-                  </div>
-                ) : (
-                  <Badge variant="destructive">Missing</Badge>
-                )}
-                </TableCell>
-                <TableCell>
-                <div className="flex items-center gap-2">
-                  {item.themeVideo.exists ? (
-                    <>
-                      <Badge variant="secondary">{item.themeVideo.format?.toUpperCase()}</Badge>
-                      <span className="text-xs text-muted-foreground">backdrops/theme.{item.themeVideo.format}</span>
-                    </>
-                  ) : (
-                    <Badge variant="destructive">Missing</Badge>
-                  )}
-                  
-                </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        placeholder="Paste audio URL (mp3)"
-                        value={audioUrls[item.id] || ''}
-                        onChange={(e) => setAudioUrls((s) => ({ ...s, [item.id]: e.target.value }))}
-                      />
-                      <Button onClick={() => handleQueueAudio(item)}>Queue Audio</Button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        placeholder="Paste video URL (mp4)"
-                        value={videoUrls[item.id] || ''}
-                        onChange={(e) => setVideoUrls((s) => ({ ...s, [item.id]: e.target.value }))}
-                      />
-                      <Button onClick={() => handleQueueVideo(item)}>Queue Video</Button>
-                    </div>
-                  </div>
-                </TableCell>
+    <Card>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[30%]">Media Title</TableHead>
+                <TableHead className="w-[15%]">Theme Audio</TableHead>
+                <TableHead className="w-[15%]">Theme Video</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-    </div>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => {
+                const missingAudio = !item.themeAudio.exists
+                const missingVideo = !item.themeVideo.exists
+                const rowMissing = missingAudio || missingVideo
+                return (
+                  <TableRow key={item.id} className={rowMissing ? 'bg-destructive/5 hover:bg-destructive/10' : undefined}>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>
+                      {item.themeAudio.exists ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="font-mono text-xs">{item.themeAudio.format?.toUpperCase()}</Badge>
+                          <span className="text-xs text-muted-foreground hidden md:inline">theme.{item.themeAudio.format}</span>
+                        </div>
+                      ) : (
+                        <Badge variant="destructive">Missing</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {item.themeVideo.exists ? (
+                          <>
+                            <Badge variant="secondary" className="font-mono text-xs">{item.themeVideo.format?.toUpperCase()}</Badge>
+                            <span className="text-xs text-muted-foreground hidden lg:inline">backdrops/theme.{item.themeVideo.format}</span>
+                          </>
+                        ) : (
+                          <Badge variant="destructive">Missing</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Audio URL (mp3)"
+                            value={audioUrls[item.id] || ''}
+                            onChange={(e) => setAudioUrls((s) => ({ ...s, [item.id]: e.target.value }))}
+                            className="text-sm"
+                          />
+                          <Button 
+                            onClick={() => handleQueueAudio(item)}
+                            size="sm"
+                            variant="secondary"
+                            className="whitespace-nowrap"
+                          >
+                            Queue Audio
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Video URL (mp4)"
+                            value={videoUrls[item.id] || ''}
+                            onChange={(e) => setVideoUrls((s) => ({ ...s, [item.id]: e.target.value }))}
+                            className="text-sm"
+                          />
+                          <Button 
+                            onClick={() => handleQueueVideo(item)}
+                            size="sm"
+                            variant="secondary"
+                            className="whitespace-nowrap"
+                          >
+                            Queue Video
+                          </Button>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { MediaItemList } from './MediaItemList'
 import { getMovies, getSeries } from '@/lib/api'
 import type { MovieItem } from '@/types/media'
@@ -196,178 +198,244 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
   }
 
   return (
-    <div className="w-full">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Jellyfin Theme Manager</h1>
+    <div className="w-full max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Jellyfin Theme Manager</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage theme audio and video for your media library</p>
+        </div>
         <Button variant="outline" onClick={onEditPaths}>Edit Paths</Button>
       </div>
-      <Tabs value={tab} onValueChange={(v) => setTab(v as 'movies' | 'series')}>
-        <TabsList>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as 'movies' | 'series')} className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="movies">Movies</TabsTrigger>
           <TabsTrigger value="series">TV Shows</TabsTrigger>
         </TabsList>
-        <Separator className="my-4" />
-        <div className="mb-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <label className="text-sm">Filter</label>
-            <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-              <SelectTrigger className="w-56">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All items</SelectItem>
-                <SelectItem value="missing-any">Missing audio or video</SelectItem>
-                <SelectItem value="missing-audio">Missing theme audio</SelectItem>
-                <SelectItem value="missing-video">Missing theme video</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-sm">Queue</label>
-            <div className="text-sm">{queue.length} item(s)</div>
-            <Button size="sm" variant="secondary" onClick={executeQueue} disabled={!queue.length || executing}>
-              {executing ? 'Executing…' : 'Execute Queue'}
-            </Button>
-            <Button size="sm" variant="outline" onClick={clearQueue} disabled={!queue.length || executing}>
-              Clear Queue
-            </Button>
-          </div>
-          {executingLabel ? (
-            <div className="text-xs text-muted-foreground">{executingLabel}</div>
-          ) : null}
-
-          <div className="flex items-center gap-2">
-            <input
-              id="toggle-crop"
-              type="checkbox"
-              checked={removeBlackBars}
-              onChange={(e) => setRemoveBlackBars(e.target.checked)}
-            />
-            <label htmlFor="toggle-crop" className="text-sm select-none">Remove black bars (ffmpeg crop)</label>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm">Cookies method</label>
-            <Select
-              value={cookiesMethod}
-              onValueChange={(v) =>
-                setCookiesMethod(
-                  (v as 'none' | 'path' | 'upload' | 'paste' | 'browser')
-                )
-              }
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="path">Absolute path</SelectItem>
-                <SelectItem value="upload">Upload file</SelectItem>
-                <SelectItem value="paste">Paste contents</SelectItem>
-                <SelectItem value="browser">From browser</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {cookiesMethod === 'path' && (
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="cookies.txt absolute path"
-                value={cookiesPath}
-                onChange={(e) => setCookiesPath(e.target.value)}
-              />
-            </div>
-          )}
-
-          {cookiesMethod === 'upload' && (
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                accept=".txt"
-                onChange={(e) => setCookiesFile(e.target.files?.[0] || null)}
-              />
-              <Button
-                variant="outline"
-                disabled={!cookiesFile || uploading}
-                onClick={async () => {
-                  if (!cookiesFile) return
-                  setUploading(true)
-                  try {
-                    const savedPath = await uploadCookies(cookiesFile)
-                    setCookiesPath(savedPath)
-                    toast.success('Cookies uploaded')
-                  } catch (err: unknown) {
-                    const msg = err instanceof Error ? err.message : 'Upload failed'
-                    toast.error(msg)
-                  } finally {
-                    setUploading(false)
-                  }
-                }}
-              >
-                {uploading ? 'Uploading...' : 'Upload cookies.txt'}
-              </Button>
-            </div>
-          )}
-
-          {cookiesMethod === 'paste' && (
-            <div className="flex flex-col gap-2">
-              <Textarea
-                placeholder="Paste cookies.txt contents (Netscape format)"
-                value={cookiesText}
-                onChange={(e) => setCookiesText(e.target.value)}
-              />
-              <div>
-                <Button
-                  variant="outline"
-                  disabled={!cookiesText.trim()}
-                  onClick={async () => {
-                    try {
-                      const savedPath = await uploadCookiesText(cookiesText)
-                      setCookiesPath(savedPath)
-                      toast.success('Cookies saved')
-                    } catch (err: unknown) {
-                      const msg = err instanceof Error ? err.message : 'Save failed'
-                      toast.error(msg)
-                    }
-                  }}
-                >
-                  Save cookies text
-                </Button>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Filter & Queue</CardTitle>
+              <CardDescription>Filter items and manage download queue</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Filter Items</label>
+                <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All items</SelectItem>
+                    <SelectItem value="missing-any">Missing audio or video</SelectItem>
+                    <SelectItem value="missing-audio">Missing theme audio</SelectItem>
+                    <SelectItem value="missing-video">Missing theme video</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-          )}
 
-          {cookiesMethod === 'browser' && (
-            <div className="flex items-center gap-2">
-              <label className="text-sm">Use cookies from browser</label>
-              <Select value={useCookiesFromBrowser ? 'yes' : 'no'} onValueChange={(v) => setUseCookiesFromBrowser(v === 'yes')}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no">No</SelectItem>
-                  <SelectItem value="yes">Yes</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={browser} onValueChange={(v) => setBrowser(v)}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Browser" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="chrome">Chrome</SelectItem>
-                  <SelectItem value="chromium">Chromium</SelectItem>
-                  <SelectItem value="brave">Brave</SelectItem>
-                  <SelectItem value="edge">Edge</SelectItem>
-                  <SelectItem value="firefox">Firefox</SelectItem>
-                  <SelectItem value="safari">Safari</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+              <Separator />
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Download Queue</label>
+                  <Badge variant="secondary">{queue.length} {queue.length === 1 ? 'item' : 'items'}</Badge>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    className="flex-1" 
+                    variant="default" 
+                    onClick={executeQueue} 
+                    disabled={!queue.length || executing}
+                  >
+                    {executing ? 'Executing…' : 'Execute Queue'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={clearQueue} 
+                    disabled={!queue.length || executing}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                {executingLabel && (
+                  <div className="text-xs text-muted-foreground bg-muted p-2 rounded-md">{executingLabel}</div>
+                )}
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center space-x-2">
+                <input
+                  id="toggle-crop"
+                  type="checkbox"
+                  checked={removeBlackBars}
+                  onChange={(e) => setRemoveBlackBars(e.target.checked)}
+                  className="rounded"
+                />
+                <label htmlFor="toggle-crop" className="text-sm font-medium cursor-pointer select-none">
+                  Remove black bars (ffmpeg crop)
+                </label>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Authentication</CardTitle>
+              <CardDescription>Configure cookies for downloads requiring authentication</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cookies Method</label>
+                <Select
+                  value={cookiesMethod}
+                  onValueChange={(v) =>
+                    setCookiesMethod(
+                      (v as 'none' | 'path' | 'upload' | 'paste' | 'browser')
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="path">Absolute path</SelectItem>
+                    <SelectItem value="upload">Upload file</SelectItem>
+                    <SelectItem value="paste">Paste contents</SelectItem>
+                    <SelectItem value="browser">From browser</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {cookiesMethod === 'path' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">File Path</label>
+                  <Input
+                    placeholder="/path/to/cookies.txt"
+                    value={cookiesPath}
+                    onChange={(e) => setCookiesPath(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {cookiesMethod === 'upload' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Upload File</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept=".txt"
+                      onChange={(e) => setCookiesFile(e.target.files?.[0] || null)}
+                      className="flex-1 text-sm"
+                    />
+                    <Button
+                      size="sm"
+                      disabled={!cookiesFile || uploading}
+                      onClick={async () => {
+                        if (!cookiesFile) return
+                        setUploading(true)
+                        try {
+                          const savedPath = await uploadCookies(cookiesFile)
+                          setCookiesPath(savedPath)
+                          toast.success('Cookies uploaded')
+                        } catch (err: unknown) {
+                          const msg = err instanceof Error ? err.message : 'Upload failed'
+                          toast.error(msg)
+                        } finally {
+                          setUploading(false)
+                        }
+                      }}
+                    >
+                      {uploading ? 'Uploading...' : 'Upload'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {cookiesMethod === 'paste' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Paste Contents</label>
+                  <Textarea
+                    placeholder="Paste cookies.txt contents (Netscape format)"
+                    value={cookiesText}
+                    onChange={(e) => setCookiesText(e.target.value)}
+                    rows={4}
+                  />
+                  <Button
+                    size="sm"
+                    disabled={!cookiesText.trim()}
+                    onClick={async () => {
+                      try {
+                        const savedPath = await uploadCookiesText(cookiesText)
+                        setCookiesPath(savedPath)
+                        toast.success('Cookies saved')
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : 'Save failed'
+                        toast.error(msg)
+                      }
+                    }}
+                  >
+                    Save Cookies
+                  </Button>
+                </div>
+              )}
+
+              {cookiesMethod === 'browser' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Enable Browser Cookies</label>
+                    <Select value={useCookiesFromBrowser ? 'yes' : 'no'} onValueChange={(v) => setUseCookiesFromBrowser(v === 'yes')}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {useCookiesFromBrowser && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Browser</label>
+                      <Select value={browser} onValueChange={(v) => setBrowser(v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select browser" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="chrome">Chrome</SelectItem>
+                          <SelectItem value="chromium">Chromium</SelectItem>
+                          <SelectItem value="brave">Brave</SelectItem>
+                          <SelectItem value="edge">Edge</SelectItem>
+                          <SelectItem value="firefox">Firefox</SelectItem>
+                          <SelectItem value="safari">Safari</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
-        <TabsContent value="movies">
+        <TabsContent value="movies" className="space-y-4">
           {loading && movies == null ? (
-            <div className="text-sm text-muted-foreground">Loading...</div>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-sm text-muted-foreground">Loading movies...</div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : applyFilter(movies).length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-sm text-muted-foreground">No movies found</p>
+                  <p className="text-xs text-muted-foreground mt-1">Try adjusting your filter or add media paths</p>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             <MediaItemList
               items={applyFilter(movies)}
@@ -375,9 +443,24 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
             />
           )}
         </TabsContent>
-        <TabsContent value="series">
+        <TabsContent value="series" className="space-y-4">
           {loading && series == null ? (
-            <div className="text-sm text-muted-foreground">Loading...</div>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-sm text-muted-foreground">Loading TV shows...</div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : applyFilter(series).length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-sm text-muted-foreground">No TV shows found</p>
+                  <p className="text-xs text-muted-foreground mt-1">Try adjusting your filter or add media paths</p>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             <MediaItemList
               items={applyFilter(series)}
@@ -387,17 +470,50 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
         </TabsContent>
       </Tabs>
       {showConsole && (
-        <div className="fixed inset-0 z-50 bg-black/50">
-          <div className="absolute inset-x-4 top-10 bottom-10 rounded-md bg-background border shadow-lg p-4 flex flex-col">
-            <div className="font-medium mb-2">Execution console</div>
-            <div className="text-xs text-muted-foreground mb-2">{executingLabel}</div>
-            <div className="flex-1 overflow-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap">
-              {consoleLines.map((l, i) => (
-                <div key={i}>{l}</div>
-              ))}
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">Queue is running… This window will close automatically when finished.</div>
-          </div>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg">Download Queue Execution</CardTitle>
+                  <CardDescription>
+                    {executingLabel || 'Processing queue...'}
+                  </CardDescription>
+                </div>
+                <Badge variant={executing ? 'default' : 'secondary'} className="ml-4">
+                  {executing ? 'Running' : 'Complete'}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden flex flex-col pb-4">
+              <div 
+                className="flex-1 overflow-auto rounded-md bg-slate-950 dark:bg-slate-900 p-4 font-mono text-xs text-slate-50 space-y-0.5"
+                style={{ scrollBehavior: 'smooth' }}
+                ref={(el) => {
+                  if (el && consoleLines.length > 0) {
+                    el.scrollTop = el.scrollHeight
+                  }
+                }}
+              >
+                {consoleLines.length === 0 ? (
+                  <div className="text-slate-400">Waiting for output...</div>
+                ) : (
+                  consoleLines.map((l, i) => (
+                    <div 
+                      key={i} 
+                      className={l.startsWith('ERROR:') ? 'text-red-400' : l.startsWith('--') ? 'text-cyan-400 font-semibold' : l.startsWith('DONE:') ? 'text-green-400' : 'text-slate-300'}
+                    >
+                      {l}
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{queue.length} {queue.length === 1 ? 'item' : 'items'} in queue</span>
+                <span>This window will close automatically when finished</span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

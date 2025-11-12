@@ -26,7 +26,13 @@ export function AppRoot() {
   }, [])
 
   if (paths == null) {
-    return <div className="text-sm text-muted-foreground">Loading...</div>
+    return (
+      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-sm text-muted-foreground">Loading application...</div>
+        </div>
+      </div>
+    )
   }
 
   if (!paths.length || editing) {

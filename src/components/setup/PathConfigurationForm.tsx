@@ -68,24 +68,30 @@ export function PathConfigurationForm({ onComplete, initialPaths }: { onComplete
   }
 
   return (
-    <Card className="w-full max-w-3xl">
-      <CardHeader>
-        <CardTitle>Configure Media Paths</CardTitle>
-      </CardHeader>
+    <div className="w-full max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Setup</h1>
+        <p className="text-sm text-muted-foreground mt-1">Configure your media library paths</p>
+      </div>
+      <Card className="w-full max-w-3xl">
+        <CardHeader>
+          <CardTitle>Media Paths</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">Add absolute paths to your Movies and TV Shows directories</p>
+        </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {fields.map((field, index) => (
-              <div key={field.id} className="rounded-md border p-4">
+              <div key={field.id} className="rounded-lg border bg-card p-4 shadow-sm">
                 <div className="grid gap-4 sm:grid-cols-12">
                   <FormField
                     control={form.control}
                     name={`paths.${index}.path`}
                     render={({ field }) => (
                       <FormItem className="sm:col-span-8">
-                        <FormLabel>Absolute Path</FormLabel>
+                        <FormLabel className="text-sm font-medium">Absolute Path</FormLabel>
                         <FormControl>
-                          <Input placeholder="/path/to/Movies" {...field} />
+                          <Input placeholder="/absolute/path/to/Movies" {...field} className="text-sm" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -96,7 +102,7 @@ export function PathConfigurationForm({ onComplete, initialPaths }: { onComplete
                     name={`paths.${index}.type`}
                     render={({ field }) => (
                       <FormItem className="sm:col-span-3">
-                        <FormLabel>Type</FormLabel>
+                        <FormLabel className="text-sm font-medium">Type</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -115,29 +121,32 @@ export function PathConfigurationForm({ onComplete, initialPaths }: { onComplete
                   <div className="sm:col-span-1 flex items-end">
                     <Button
                       type="button"
-                      variant="destructive"
+                      variant="outline"
+                      size="icon"
                       onClick={() => remove(index)}
                       disabled={fields.length === 1}
-                      className="w-full"
+                      className="text-destructive hover:text-destructive"
+                      title="Remove path"
                     >
-                      Remove
+                      ×
                     </Button>
                   </div>
                 </div>
               </div>
             ))}
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center pt-2">
               <Button type="button" variant="outline" onClick={() => append({ path: '', type: 'Movie' })}>
-                Add Path
+                + Add Another Path
               </Button>
-              <Button type="submit" disabled={!form.formState.isValid || submitting}>
-                {submitting ? 'Saving...' : 'Next'}
+              <Button type="submit" disabled={!form.formState.isValid || submitting} size="lg">
+                {submitting ? 'Saving...' : 'Save & Continue'}
               </Button>
             </div>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
