@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { MediaItemList } from './MediaItemList'
-import { getMovies, getSeries, downloadAudio, downloadVideo } from '@/lib/api'
+import { getMovies, getSeries } from '@/lib/api'
 import type { MovieItem } from '@/types/media'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,6 +30,8 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
   const [queue, setQueue] = useState<Array<{ type: 'audio' | 'video'; item: MovieItem; url: string }>>([])
   const [removeBlackBars, setRemoveBlackBars] = useState<boolean>(false)
   const [executingLabel, setExecutingLabel] = useState<string>('')
+  const [showConsole, setShowConsole] = useState(false)
+  const [consoleLines, setConsoleLines] = useState<string[]>([])
 
   const loadMovies = useCallback(async () => {
     setLoading(true)
@@ -64,6 +66,8 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
     if (!queue.length) return toast.info('Queue is empty')
     if (executing) return
     setExecuting(true)
+    setShowConsole(true)
+    setConsoleLines([])
     try {
       const useBrowser = cookiesMethod === 'browser' ? useCookiesFromBrowser : false
       const cookiesFilePath = (cookiesMethod === 'path' || cookiesMethod === 'upload' || cookiesMethod === 'paste') && cookiesPath ? cookiesPath : undefined
@@ -78,14 +82,20 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
               : `Running YTDLP on ${t.item.name}`
           )
           if (t.type === 'audio') {
-            await downloadAudio(t.url, t.item.id, t.item.path, {
+            await streamTask('/api/download/audio/stream', {
+              url: t.url,
+              itemId: t.item.id,
+              targetPath: t.item.path,
               cookiesFilePath,
               useCookiesFromBrowser: useBrowser,
               browser: cookiesMethod === 'browser' ? browser : undefined,
             })
             toast.success(`Audio downloaded: ${t.item.name}`)
           } else {
-            await downloadVideo(t.url, t.item.id, t.item.path, {
+            await streamTask('/api/download/video/stream', {
+              url: t.url,
+              itemId: t.item.id,
+              targetPath: t.item.path,
               cookiesFilePath,
               useCookiesFromBrowser: useBrowser,
               browser: cookiesMethod === 'browser' ? browser : undefined,
@@ -105,6 +115,58 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
       setExecuting(false)
       setQueue([])
       setExecutingLabel('')
+      setShowConsole(false)
+      setConsoleLines([])
+    }
+  }
+
+  async function streamTask(endpoint: string, payload: Record<string, unknown>): Promise<void> {
+    // Consume simple SSE (text/event-stream) via fetch and a line parser.
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok || !res.body) {
+      throw new Error('Failed to start streaming task')
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      let idx: number
+      while ((idx = buffer.indexOf('\n\n')) !== -1) {
+        const packet = buffer.slice(0, idx)
+        buffer = buffer.slice(idx + 2)
+        // Parse event and data lines
+        const lines = packet.split('\n')
+        let event: string | undefined
+        let data = ''
+        for (const line of lines) {
+          if (line.startsWith('event:')) event = line.slice(6).trim()
+          else if (line.startsWith('data:')) data += (data ? '\n' : '') + line.slice(5).trim()
+        }
+        if (event) {
+          if (event === 'log') {
+            setConsoleLines((prev) => [...prev, data])
+          } else if (event === 'stage') {
+            setConsoleLines((prev) => [...prev, `-- ${data} --`])
+          } else if (event === 'error') {
+            setConsoleLines((prev) => [...prev, `ERROR: ${data}`])
+          } else if (event === 'done') {
+            // finalize
+            try {
+              const obj = JSON.parse(data)
+              setConsoleLines((prev) => [...prev, `DONE: ${obj?.file?.path || ''}`])
+            } catch {
+              setConsoleLines((prev) => [...prev, 'DONE'])
+            }
+          }
+        }
+      }
     }
   }
 
@@ -324,6 +386,20 @@ export function Dashboard({ onEditPaths }: { onEditPaths?: () => void }) {
           )}
         </TabsContent>
       </Tabs>
+      {showConsole && (
+        <div className="fixed inset-0 z-50 bg-black/50">
+          <div className="absolute inset-x-4 top-10 bottom-10 rounded-md bg-background border shadow-lg p-4 flex flex-col">
+            <div className="font-medium mb-2">Execution console</div>
+            <div className="text-xs text-muted-foreground mb-2">{executingLabel}</div>
+            <div className="flex-1 overflow-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap">
+              {consoleLines.map((l, i) => (
+                <div key={i}>{l}</div>
+              ))}
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">Queue is running… This window will close automatically when finished.</div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
