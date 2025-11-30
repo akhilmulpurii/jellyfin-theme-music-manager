@@ -14,6 +14,16 @@ A modern Next.js web application for managing theme songs and backdrop videos fo
 - 🎨 **Modern UI**: Built with shadcn/ui components for a polished, responsive experience
 - 💾 **Local-Only**: All data is stored locally - nothing is saved to external servers
 
+## Screenshots
+
+![Setup form for media paths](screenshots/setup.jpg)
+
+![Landing page](screenshots/landing.jpg)
+
+![Landing page (continued)](screenshots/landing%202.jpg)
+
+![Queue execution with progress logs](screenshots/procees.jpg)
+
 ## Prerequisites
 
 ### Required Dependencies
@@ -25,61 +35,70 @@ A modern Next.js web application for managing theme songs and backdrop videos fo
 ### Installation Commands
 
 #### macOS (using Homebrew)
+
 ```bash
 brew install yt-dlp ffmpeg
 ```
 
 #### Windows (using Chocolatey)
+
 ```bash
 choco install yt-dlp ffmpeg
 ```
 
 #### Ubuntu/Debian
+
 ```bash
 sudo apt update
 sudo apt install yt-dlp ffmpeg
 ```
 
 #### Manual Installation
+
 - **yt-dlp**: Download from [GitHub releases](https://github.com/yt-dlp/yt-dlp/releases)
 - **FFmpeg**: Download from [official website](https://ffmpeg.org/download.html)
 
 ## Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd jellyfin-theme-manager
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
-   
+
    Create a `.env.local` file in the root directory:
+
    ```env
    # Path to your yt-dlp binary (if not in PATH)
    YTDLP_PATH=/usr/local/bin/yt-dlp
-   
+
    # Optional: Default cookies file location
    YTDLP_COOKIES_FILE=/path/to/cookies.txt
-   
+
    # Optional: Default browser for cookie extraction
    YTDLP_BROWSER=chrome
-   
+
    # Data directory for storing configuration
    DATA_DIR=./data
    ```
 
 4. **Create data directory**
+
    ```bash
    mkdir -p data
    ```
 
 5. **Start the development server**
+
    ```bash
    npm run dev
    ```
@@ -100,6 +119,7 @@ On first launch, you'll need to configure your media library paths:
 ### 2. Media Scanning
 
 The application automatically scans your configured directories and displays:
+
 - Movie/TV show titles
 - Current theme audio status (format and file existence)
 - Current theme video status (format and file existence)
@@ -108,6 +128,7 @@ The application automatically scans your configured directories and displays:
 ### 3. Filtering
 
 Use the filter dropdown to focus on specific items:
+
 - **All items**: Show everything
 - **Missing audio or video**: Items that need at least one theme file
 - **Missing theme audio**: Items without theme songs
@@ -135,6 +156,7 @@ For YouTube videos that require authentication, configure cookies using one of t
 ### 6. Live Monitoring
 
 During queue execution, a console overlay shows:
+
 - Real-time download progress
 - yt-dlp and FFmpeg output
 - Error messages and success indicators
@@ -145,6 +167,7 @@ During queue execution, a console overlay shows:
 The application organizes theme files following Jellyfin conventions:
 
 ### Movies
+
 ```
 /Movie Name (Year)/
 ├── theme.mp3           # Theme audio
@@ -153,6 +176,7 @@ The application organizes theme files following Jellyfin conventions:
 ```
 
 ### TV Shows
+
 ```
 /TV Show Name (Year)/
 ├── theme.mp3           # Theme audio
@@ -173,16 +197,17 @@ The application organizes theme files following Jellyfin conventions:
 
 ### Environment Variables
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `YTDLP_PATH` | Path to yt-dlp binary | `yt-dlp` (from PATH) | No |
-| `YTDLP_COOKIES_FILE` | Default cookies file path | None | No |
-| `YTDLP_BROWSER` | Default browser for cookies | `chrome` | No |
-| `DATA_DIR` | Configuration storage directory | `./data` | No |
+| Variable             | Description                     | Default              | Required |
+| -------------------- | ------------------------------- | -------------------- | -------- |
+| `YTDLP_PATH`         | Path to yt-dlp binary           | `yt-dlp` (from PATH) | No       |
+| `YTDLP_COOKIES_FILE` | Default cookies file path       | None                 | No       |
+| `YTDLP_BROWSER`      | Default browser for cookies     | `chrome`             | No       |
+| `DATA_DIR`           | Configuration storage directory | `./data`             | No       |
 
 ### Video Processing
 
 When "Remove black bars" is enabled:
+
 1. Video is downloaded normally
 2. FFmpeg runs `cropdetect` for 4 seconds to analyze black bars
 3. Video is re-encoded with automatic cropping
@@ -193,14 +218,17 @@ When "Remove black bars" is enabled:
 ### Common Issues
 
 1. **yt-dlp not found**
+
    - Ensure yt-dlp is installed and in your PATH
    - Or set `YTDLP_PATH` environment variable to the binary location
 
 2. **FFmpeg not found**
+
    - Install FFmpeg or disable video cropping option
    - Ensure FFmpeg is in your PATH if using video processing
 
 3. **Permission denied errors**
+
    - Check that the application has write permissions to your media directories
    - Ensure the data directory is writable
 
